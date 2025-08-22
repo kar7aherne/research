@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Research Feed</title>
+<style>
+  body { font-family: system-ui, Arial, sans-serif; margin: 2rem auto; max-width: 960px; padding: 0 1rem; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+  input[type="search"]{ padding:.6rem .8rem; font-size:1rem; flex:1; min-width:260px; }
+  .card { border:1px solid #eee; border-radius:12px; padding:1rem; margin:.75rem 0; }
+  .card h3 { margin:.2rem 0 .25rem; font-size:1.1rem; }
+  .meta { color:#666; font-size:.9rem; }
+  .tags span{ display:inline-block; border:1px solid #ddd; border-radius:999px; padding:.15rem .5rem; margin-right:.35rem; font-size:.8rem; }
+</style>
+<header>
+  <h1 style="margin:0; font-size:1.25rem;">Research Feed</h1>
+  <input id="q" type="search" placeholder="Search title, subject, tags..." aria-label="Search">
+  <div id="count" class="meta"></div>
+</header>
+<main id="list" aria-live="polite"></main>
+<script>
+let ALL=[];
+async function load(){
+  const r = await fetch('index.json?cache=' + Date.now());
+  ALL = await r.json();
+  ALL.sort((a,b)=> new Date(b.date) - new Date(a.date));
+  render(ALL);
+}
+function render(items){
+  const list = document.getElementById('list'); list.innerHTML='';
+  items.forEach(it=>{
+    const div = document.createElement('div'); div.className='card';
+    const date = new Date(it.date).toLocaleString();
+    div.innerHTML = `
+      <h3><a href="${it.path}" target="_blank" rel="noopener">${it.title || it.subject}</a></h3>
+      <div class="meta">${date}${it.subject && it.title!==it.subject ? " • " + it.subject : ""}</div>
+      ${it.excerpt ? `<p>${it.excerpt}</p>` : ""}
+      ${Array.isArray(it.tags)&&it.tags.length ? `<div class="tags">${it.tags.map(t=>`<span>${t}</span>`).join('')}</div>`:""}
+    `;
+    list.appendChild(div);
+  });
+  document.getElementById('count').textContent = `${items.length} item${items.length===1?'':'s'}`;
+}
+document.getElementById('q').addEventListener('input', e=>{
+  const q = e.target.value.trim().toLowerCase();
+  if(!q) return render(ALL);
+  const match = s => (s||'').toLowerCase().includes(q);
+  render(ALL.filter(it => match(it.title)||match(it.subject)||match(it.excerpt)||(it.tags||[]).some(match)));
+});
+load();
+</script>
+</html>
